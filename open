@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>공생 경영 시뮬레이터 v2.2</title>
+    <style>
+        :root { --p: #2c3e50; --s: #27ae60; --d: #e74c3c; --bg: #f4f7f6; }
+        body { font-family: 'Pretendard', sans-serif; background: var(--bg); padding: 20px; font-size: 13px; }
+        .wrapper { max-width: 1300px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; }
+        header { grid-column: 1 / -1; background: var(--p); color: white; padding: 15px; border-radius: 10px; text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
+        h2 { font-size: 1.1rem; border-left: 5px solid #3498db; padding-left: 10px; margin-bottom: 15px; color: var(--p); }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+        th, td { padding: 8px; border: 1px solid #eee; text-align: right; }
+        th { background: #f8f9fa; text-align: center; color: #666; }
+        .sum-row { background: #fff9db; font-weight: bold; }
+        .total-row { background: #e8f5e9; font-weight: bold; font-size: 1.1em; }
+        input { width: 90%; padding: 4px; text-align: right; border: 1px solid #ddd; border-radius: 4px; font-weight: bold; }
+        .summary { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat { padding: 15px; border-radius: 10px; color: white; text-align: center; }
+        .inc { background: var(--s); } .exp { background: var(--d); } .net { background: #34495e; } .ratio { background: #8e44ad; }
+        .val { font-size: 1.6rem; font-weight: bold; display: block; margin-top: 5px; }
+        .diff-box { margin-top: auto; padding: 15px; border-radius: 8px; text-align: center; font-size: 1.2rem; font-weight: bold; border: 2px solid #eee; }
+        .diff-plus { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+        .diff-minus { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
+        .warning { color: var(--d); font-weight: bold; text-align: center; padding: 5px; font-size: 0.9rem; }
+        small { font-weight: normal; font-size: 0.8rem; display: block; color: #777; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>📋 공동생활가정(18인) 창업 경영 시뮬레이터 v2.2</h1>
+</header>
+
+<div class="summary">
+    <div class="stat inc">수입 총합 (A+B)<span id="disp-total-inc" class="val">0</span></div>
+    <div class="stat exp">지출 총합 (C+D)<span id="disp-total-exp" class="val">0</span></div>
+    <div class="stat net">예상 순수익<span id="disp-total-net" class="val">0</span></div>
+    <div class="stat ratio">인건비 지출 비율<small>(시설장 제외 65.2%↑)</small><span id="disp-labor-ratio" class="val">0%</span></div>
+</div>
+
+<div class="wrapper">
+    <div class="card">
+        <h2>1. 급여 수입 (A: 기본 수가)</h2>
+        <table>
+            <thead><tr><th>구분</th><th>수가(일)</th><th>인원</th><th>월 수입</th></tr></thead>
+            <tbody id="income-base-body">
+                <tr><td>일반 1등급</td><td>74,590</td><td><input type="number" id="in-1" value="4" oninput="calc()"></td><td id="res-1">0</td></tr>
+                <tr><td>일반 2등급</td><td>69,210</td><td><input type="number" id="in-2" value="4" oninput="calc()"></td><td id="res-2">0</td></tr>
+                <tr><td>일반 3~5등급</td><td>63,800</td><td><input type="number" id="in-3" value="4" oninput="calc()"></td><td id="res-3">0</td></tr>
+                <tr><td>치매전담 2등급</td><td>85,790</td><td><input type="number" id="in-d2" value="3" oninput="calc()"></td><td id="res-d2">0</td></tr>
+                <tr><td>치매전담 3~5등급</td><td>79,100</td><td><input type="number" id="in-d3" value="3" oninput="calc()"></td><td id="res-d3">0</td></tr>
+            </tbody>
+            <tfoot class="sum-row">
+                <tr><td colspan="2">기본 수가 수입 총액 (A)</td><td id="total-seniors">18명</td><td id="total-basic-inc">0</td></tr>
+            </tfoot>
+        </table>
+
+        <h2>2. 비급여 및 가산 (B)</h2>
+        <table>
+            <thead><tr><th>항목</th><th>단가/기준</th><th>수량/인원</th><th>월 수입</th></tr></thead>
+            <tbody>
+                <tr><td>식대+간식 (1일)</td><td><input type="number" id="meal-unit" value="12000" oninput="calc()"></td><td>30일</td><td id="meal-total">0</td></tr>
+                <tr><td>상급침실료 (1인실)</td><td><input type="number" id="room1-unit" value="20000" oninput="calc()"></td><td>14개</td><td id="room1-total">0</td></tr>
+                <tr><td>상급침실료 (2인실)</td><td><input type="number" id="room2-unit" value="10000" oninput="calc()"></td><td>4인</td><td id="room2-total">0</td></tr>
+                <tr><td>인력추가 가산</td><td>자동산출</td><td>-</td><td id="bonus-total">0</td></tr>
+            </tbody>
+            <tfoot class="sum-row">
+                <tr><td colspan="3">비급여 및 가산 수입 총액 (B)</td><td id="total-extra-inc">0</td></tr>
+            </tfoot>
+        </table>
+        <div class="total-row" style="padding:15px; text-align:right; border-radius:5px; margin-top: auto; border: 2px solid var(--s);">
+            <span style="color:#666; font-size: 0.9rem;">최종 수입 합계 (A + B) :</span><br>
+            <span id="final-income-val" style="color:var(--s); font-size: 1.4rem;">0</span> 원
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>3. 인건비 지출 (C)</h2>
+        <table>
+            <thead><tr><th>직종</th><th>월급여</th><th>인원</th><th>4대보험(9%)</th><th>퇴직적립</th><th>총 지출</th></tr></thead>
+            <tbody id="labor-table"></tbody>
+            <tfoot class="sum-row">
+                <tr>
+                    <td>야간수당 <small>(10,320*0.5)</small></td>
+                    <td>-</td>
+                    <td><input type="number" id="night-h" value="10" oninput="calc()">h/일</td>
+                    <td id="night-ins">0</td>
+                    <td id="night-ret">0</td>
+                    <td id="sum-night">0</td>
+                </tr>
+                <tr class="total-row">
+                    <td colspan="3">인건비 지출 총액 (C)</td>
+                    <td id="total-labor-ins">0</td>
+                    <td id="total-labor-ret">0</td>
+                    <td id="total-labor-sum">0</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <h2>4. 기타 운영 지출 (D)</h2>
+        <table>
+            <tr><th width="50%">임대료 및 관리비</th><td id="rent-val"><input type="number" id="exp-rent" value="25000000" oninput="calc()"></td></tr>
+            <tr><th>식재료비 <small>(수입과 동일 세팅)</small></th><td id="exp-meal">0</td></tr>
+            <tr><th>제반 운영비</th><td><input type="number" id="exp-op" value="2000000" oninput="calc()"></td></tr>
+            <tr><th>전출금</th><td><input type="number" id="exp-trans" value="0" oninput="calc()"></td></tr>
+            <tr class="sum-row"><th>기타 지출 총액 (D)</th><td id="total-other-exp">0</td></tr>
+        </table>
+        
+        <div id="limit-msg" class="warning"></div>
+        
+        <div id="diff-analysis-box" class="diff-box">
+            <span id="diff-text">분석 중...</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 인건비 데이터 관리 (isTarget: false 일 경우 비율 계산 분자에서 제외)
+    const staffData = [
+        { id: 'mgr', name: '시설장', pay: 3000000, cnt: 1, isTarget: false },
+        { id: 'sw', name: '사회복지사', pay: 2500000, cnt: 1, isTarget: true },
+        { id: 'na', name: '간호조무사', pay: 2300000, cnt: 2, isTarget: true },
+        { id: 'cw', name: '요양보호사', pay: 2156880, cnt: 8, isTarget: true }
+    ];
+
+    function initTable() {
+        const body = document.getElementById('labor-table');
+        staffData.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td align="center"><b>${s.name}</b> ${s.id==='mgr'?'<br><small>(비율제외)</small>':''}</td>
+                <td><input type="number" id="pay-${s.id}" value="${s.pay}" oninput="calc()"></td>
+                <td><input type="number" id="cnt-${s.id}" value="${s.cnt}" oninput="calc()"></td>
+                <td id="ins-${s.id}">0</td>
+                <td id="ret-${s.id}">0</td>
+                <td id="sum-${s.id}" style="font-weight:bold">0</td>
+            `;
+            body.appendChild(tr);
+        });
+        calc();
+    }
+
+    function calc() {
+        // 1. 기본수가수입 (A)
+        const rates = [74590, 69210, 63800, 85790, 79100];
+        let basicInc = 0;
+        let totalSeniors = 0;
+        const inputs = ['in-1', 'in-2', 'in-3', 'in-d2', 'in-d3'];
+        
+        inputs.forEach((id, idx) => {
+            const cnt = Number(document.getElementById(id).value);
+            const rowInc = cnt * rates[idx] * 30;
+            document.getElementById('res-' + id.split('-')[1]).innerText = rowInc.toLocaleString();
+            basicInc += rowInc;
+            totalSeniors += cnt;
+        });
+        document.getElementById('total-seniors').innerText = totalSeniors + "명";
+        document.getElementById('total-basic-inc').innerText = basicInc.toLocaleString();
+
+        // 2. 비급여 및 가산 (B)
+        const mealTotal = totalSeniors * Number(document.getElementById('meal-unit').value) * 30;
+        const room1Total = 14 * Number(document.getElementById('room1-unit').value) * 30;
+        const room2Total = 4 * Number(document.getElementById('room2-unit').value) * 30;
+        
+        const basePoint = totalSeniors > 0 ? (basicInc / totalSeniors) * 0.9 * 0.8 : 0;
+        const cwCnt = Number(document.getElementById('cnt-cw').value);
+        let bonusTotal = 0;
+        if(cwCnt > 6) bonusTotal = (cwCnt - 6) * basePoint * 1.2;
+
+        document.getElementById('meal-total').innerText = mealTotal.toLocaleString();
+        document.getElementById('room1-total').innerText = room1Total.toLocaleString();
+        document.getElementById('room2-total').innerText = room2Total.toLocaleString();
+        document.getElementById('bonus-total').innerText = Math.floor(bonusTotal).toLocaleString();
+        
+        const extraIncTotal = mealTotal + room1Total + room2Total + bonusTotal;
+        document.getElementById('total-extra-inc').innerText = extraIncTotal.toLocaleString();
+        
+        const finalIncome = basicInc + extraIncTotal;
+        document.getElementById('final-income-val').innerText = finalIncome.toLocaleString();
+        document.getElementById('disp-total-inc').innerText = finalIncome.toLocaleString();
+
+        // 3. 인건비 지출 (C)
+        let totalLaborSum = 0;
+        let totalLaborIns = 0;
+        let totalLaborRet = 0;
+        let ratioTargetLaborSum = 0; // 시설장 제외 분자값
+
+        staffData.forEach(s => {
+            const pay = Number(document.getElementById('pay-' + s.id).value);
+            const cnt = Number(document.getElementById('cnt-' + s.id).value);
+            const ins = Math.floor(pay * 0.09 * cnt);
+            const ret = Math.floor((pay / 12) * cnt);
+            const sum = (pay * cnt) + ins + ret;
+
+            document.getElementById('ins-' + s.id).innerText = ins.toLocaleString();
+            document.getElementById('ret-' + s.id).innerText = ret.toLocaleString();
+            document.getElementById('sum-' + s.id).innerText = sum.toLocaleString();
+
+            totalLaborSum += sum;
+            totalLaborIns += ins;
+            totalLaborRet += ret;
+            
+            // 시설장(isTarget: false)인 경우 비율 계산 합계에서 제외 [cite: 101, 116]
+            if(s.isTarget) ratioTargetLaborSum += sum;
+        });
+
+        const nightBase = (10320 * 0.5) * Number(document.getElementById('night-h').value) * 30;
+        const nightIns = Math.floor(nightBase * 0.09);
+        const nightRet = Math.floor(nightBase / 12);
+        const nightTotal = nightBase + nightIns + nightRet;
+
+        document.getElementById('night-ins').innerText = nightIns.toLocaleString();
+        document.getElementById('night-ret').innerText = nightRet.toLocaleString();
+        document.getElementById('sum-night').innerText = nightTotal.toLocaleString();
+
+        totalLaborSum += nightTotal;
+        totalLaborIns += nightIns;
+        totalLaborRet += nightRet;
+        ratioTargetLaborSum += nightTotal; // 야간수당은 요양보호사 몫이므로 비율에 포함 
+
+        document.getElementById('total-labor-ins').innerText = totalLaborIns.toLocaleString();
+        document.getElementById('total-labor-ret').innerText = totalLaborRet.toLocaleString();
+        document.getElementById('total-labor-sum').innerText = totalLaborSum.toLocaleString();
+
+        // 인건비 지출 비율 계산 (시설장 제외 / 기본수가 수입) 
+        const laborRatio = basicInc > 0 ? (ratioTargetLaborSum / basicInc * 100) : 0;
+        document.getElementById('disp-labor-ratio').innerText = laborRatio.toFixed(1) + "%";
+        document.getElementById('disp-labor-ratio').parentElement.style.background = laborRatio >= 65.2 ? "#2ecc71" : "#e67e22";
+
+        // 4. 기타 지출 (D)
+        const rent = Number(document.getElementById('exp-rent').value);
+        const mealExp = mealTotal;
+        const opExp = Number(document.getElementById('exp-op').value);
+        const transExp = Number(document.getElementById('exp-trans').value);
+        
+        const otherExpTotal = rent + mealExp + opExp + transExp;
+        document.getElementById('exp-meal').innerText = mealExp.toLocaleString();
+        document.getElementById('total-other-exp').innerText = otherExpTotal.toLocaleString();
+
+        const finalExpense = totalLaborSum + otherExpTotal;
+        document.getElementById('disp-total-exp').innerText = finalExpense.toLocaleString();
+
+        // 최종 수지 분석 명시
+        const netProfit = finalIncome - finalExpense;
+        const diffBox = document.getElementById('diff-analysis-box');
+        const diffText = document.getElementById('diff-text');
+        
+        document.getElementById('disp-total-net').innerText = netProfit.toLocaleString();
+        document.getElementById('disp-total-net').parentElement.style.background = netProfit >= 0 ? "#34495e" : "#c0392b";
+
+        if(netProfit >= 0) {
+            diffBox.className = "diff-box diff-plus";
+            diffText.innerHTML = `🎉 월 💰 ${netProfit.toLocaleString()}원이 남습니다.`;
+        } else {
+            diffBox.className = "diff-box diff-minus";
+            diffText.innerHTML = `⚠️ 월 💸 ${Math.abs(netProfit).toLocaleString()}원이 모자랍니다.`;
+        }
+        
+        const msg = document.getElementById('limit-msg');
+        msg.innerText = finalExpense > finalIncome ? "지출이 수입을 초과하여 적자가 예상됩니다." : "";
+    }
+
+    window.onload = initTable;
+</script>
+</body>
+</html>
